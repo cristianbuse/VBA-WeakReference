@@ -69,7 +69,7 @@ Attribute VB_Exposed = False
 ''    Or, instead of clearing the uncounted reference, the reference count could
 ''    be manually incremented using something like:
 ''       Sub IncrementRefCount(iUnk As IUnknown, increment As Long)
-''           Dim refCount As LongPtr
+''           Dim refCount As Long
 ''           Dim targetPtr As LongPtr: targetPtr = ObjPtr(iUnk) + LenB(refCount)
 ''           '
 ''           CopyMemory refCount, ByVal targetPtr, 4 'Gets current count
@@ -122,10 +122,10 @@ Attribute VB_Exposed = False
 '' The added bonus is that a Variant that has the ByRef flag set, can safely go
 ''    out of scope as no memory is reclaimed
 '' To make retrieval safer, a second redirected Variant can be used to point at
-''    the first bytes of the object's address (holding virtual table pointer)
-''    and then comparing with the inital value of the vTable pointer thus
-''    avoiding to turn the Variant into an Object type if the target object has
-''    been destroyed already
+''    the first bytes of the object's address (holding virtual table pointer for
+''    the default interface) and then comparing with the inital value of the
+''    vTable pointer thus avoiding to turn the Variant into an Object type if
+''    the target object has been destroyed already
 '*******************************************************************************
 Option Explicit
 
@@ -195,8 +195,9 @@ Public Sub SetObject(obj As Object)
     m_fake.reference = ObjPtr(obj)
     If m_fake.reference = 0 Then Exit Sub
     '
-    'Save the object's virtual table address by reference. The vTable address
-    '   is found at the first 4 (x32) or 8 (x64) bytes at the referenced address
+    'Save the default interface's virtual table address by reference. The vTable
+    '   address is found at the first 4 (x32) or 8 (x64) bytes at the referenced
+    '   interface address
     m_fake.vTableByRef = m_fake.reference
     CopyMemory ByVal VarPtr(m_fake.vTableByRef), m_fake.vbLongPtr + VT_BYREF, 2
     '
