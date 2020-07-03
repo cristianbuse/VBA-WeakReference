@@ -13,10 +13,10 @@ Private m_parent As WeakReference
 
 Public Property Let Parent(newParent As DemoParent)
     Set m_parent = New WeakReference
-    m_parent.SetObject newParent
+    m_parent.Object = newParent
 End Property
 Public Property Get Parent() As DemoParent
-    Set Parent = m_parent.GetObject
+    Set Parent = m_parent.Object
 End Property
 
 Private Sub Class_Terminate()

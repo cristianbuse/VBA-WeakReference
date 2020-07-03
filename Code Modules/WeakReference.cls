@@ -164,6 +164,7 @@ Private Type FAKE_REFERENCE
     vTable As MEM_ADDRESS    'Initial address of virtual table
     vTableByRef As Variant   'Address used to check if reference is still valid
     vbLongPtr As Long        'Data type enum (vbLong = 3 or vbLongLong = 20)
+    isValid As Boolean       'Indicates if the memory reference is valid
 End Type
 
 Private m_fake As FAKE_REFERENCE
@@ -190,10 +191,12 @@ End Sub
 '*******************************************************************************
 'Sets the weak/fake reference to an object
 '*******************************************************************************
-Public Sub SetObject(obj As Object)
+Public Property Let Object(obj As Object)
     'Save memory address of the object
     m_fake.reference = ObjPtr(obj)
-    If m_fake.reference = 0 Then Exit Sub
+    '
+    m_fake.isValid = (m_fake.reference <> 0)
+    If Not m_fake.isValid Then Exit Property
     '
     'Save the default interface's virtual table address by reference. The vTable
     '   address is found at the first 4 (x32) or 8 (x64) bytes at the referenced
@@ -206,31 +209,25 @@ Public Sub SetObject(obj As Object)
     '   destroyed and it's memory reclaimed.
     'vTableByRef can still be read within the scope of this method
     m_fake.vTable.ptr = m_fake.vTableByRef
-End Sub
+End Property
 
 '*******************************************************************************
 'Safely retrieves the object that the saved reference is pointing to
-'Warning! If you turn this Function into a Property then while stepping through
-'   code line by line (e.g. in the SetObject method) the Property will be
-'   accessed and shown in the VBE's Locals window thus
-'   setting the Reference to 0. Leave as-is
 'No external API calls are needed!
 '*******************************************************************************
-Public Function GetObject() As Object
-    If m_fake.reference = 0 Then Exit Function
+Public Property Get Object() As Object
+    If Not m_fake.isValid Then Exit Property
     '
-    Dim isVTblSame As Boolean
-    '
+    'Compare the current vTable address value with the initial address
     'The current redirected value vTableByRef can NOT be read directly anymore
-    '   so it must be passed ByRef to an utility function and compared against
-    '   the initial vTable address
-    isVTblSame = (GetRemoteAddress(m_fake.vTableByRef).ptr = m_fake.vTable.ptr)
+    '   so it must be passed ByRef to an utility function
+    m_fake.isValid = (GetRemoteAddress(m_fake.vTableByRef).ptr = m_fake.vTable.ptr)
     '
-    If isVTblSame Then
+    If m_fake.isValid Then
         'Address is still valid. Retrive the object
         'Turn the reference into an object (needs to be done ByRef)
         VarType(m_fake.remoteVarType) = vbObject
-        Set GetObject = m_fake.reference
+        Set Object = m_fake.reference
     End If
     '
     'The fake object is not counted (reference count was never incremented by
@@ -239,10 +236,7 @@ Public Function GetObject() As Object
     '   of scope the object count is decremented one more time than it should
     'Meanwhile, as Integer, the Variant can safely go out of scope anytime
     VarType(m_fake.remoteVarType) = m_fake.vbLongPtr 'vbLong or vbLongLong
-    '
-    'Reset reference in case address is no longer valid
-    If Not isVTblSame Then m_fake.reference = 0
-End Function
+End Property
 
 '*******************************************************************************
 'Utility. Changes the data type for the reference Variant while preserving the
