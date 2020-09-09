@@ -48,11 +48,11 @@ Attribute VB_Exposed = False
 ''       then B goes out of scope (if no other references are pointing to B,
 ''       except A->B). Call would be like: B.TerminateRefs
 ''       Can be easy to forget to manually call the procedure
-''    2) Use a Weak Reference. A Weak Reference is not counted
-''       (i.e. IUnknown::AddRef method is not called) and does not protect the
+''    2) Use a Weak Reference. e.g. A->B and B--A. In a Garbage Collected
+''       language, a Weak Reference is not counted and does not protect the
 ''       referenced object from being collected by the Garbage Collector (GC)
-''       unlike a Strong Reference.
-''       e.g. A->B and B--A
+''       unlike a Strong Reference. In a non-GC language the weak references are
+''       counted separately from the strong ones (e.g. SWIFT language)
 '' Weak references are not a language feature in VBA. All references are Strong.
 ''
 '' In order to achieve a "Fake" Weak Reference in VBA, an external API that can
@@ -72,9 +72,9 @@ Attribute VB_Exposed = False
 ''       Set Result = tempobj
 ''       CopyMemory tempobj, 0, size 'so reference is not decremented
 ''       'OR
-''       ZerMemory tempobj, size
+''       ZeroMemory tempobj, size
 ''    Or, instead of clearing the uncounted reference, the reference count could
-''    be manually incremented using something like:
+''    be manually incremented using something like (for VBA classes only):
 ''       Sub IncrementRefCount(iUnk As IUnknown, increment As Long)
 ''           Dim refCount As Long
 ''           Dim targetPtr As LongPtr: targetPtr = ObjPtr(iUnk) + LenB(refCount)
@@ -97,9 +97,7 @@ Attribute VB_Exposed = False
 '' ---------------------------------------
 '' SOLUTION
 '' ---------------------------------------
-'' CopyMemory API is still needed but only once in the Class_Initalize event and
-''    once for each time the reference object is set (through the SetObject
-''    method) which is likely to be only one time. So 2 API calls in total.
+'' CopyMemory API is still needed but only once in the Class_Initalize event.
 ''
 '' Looking at how a Variant is stored in memory:
 ''    'https://docs.microsoft.com/en-us/windows/win32/api/oaidl/ns-oaidl-variant?redirectedfrom=MSDN
@@ -112,10 +110,10 @@ Attribute VB_Exposed = False
 ''    back to vbLong/vbLongLong to avoid any unwanted memory reclaims).
 '' Changing var type using the same API would look like:
 ''    Dim ptr As Variant: ptr = ObjPtr(targetObj)
-''    CopyMemory ByVal VarPtr(ptr), vbObject, 2
+''    CopyMemory ptr, vbObject, 2
 ''    'ptr is now an Object - uncounted so still unsafe
 ''    Set Result = ptr 'Result is a counted reference
-''    CopyMemory ByVal VarPtr(ptr), vbLong(or vbLongLong), 2
+''    CopyMemory ptr, vbLong(or vbLongLong), 2
 ''    'ptr is now a Long/LongLong Integer - can safely go out of scope
 '' Of course, changing 'vt' by using the same API is easy but that would defeat
 ''    the purpose of using plain VBA to make the retrival faster.
@@ -126,13 +124,12 @@ Attribute VB_Exposed = False
 ''    redirection, a simple VBA assignment would do the trick.
 ''    e.g. redirectedVariant = vbObject would change the reference data type
 ''    to Object and redirectedVariant = vbLong/vbLongLong would change it back
-'' The added bonus is that a Variant that has the ByRef flag set, can safely go
-''    out of scope as no memory is reclaimed
-'' To make retrieval safer, a second redirected Variant can be used to point at
-''    the first bytes of the object's address (holding virtual table pointer for
-''    the default interface) and then comparing with the inital value of the
-''    vTable pointer thus avoiding to turn the Variant into an Object type if
-''    the target object has been destroyed already
+''
+'' To make retrieval safe, the target object must implement the IWeakable
+''    interface and call the 'ObjectTerminated' method from it's Class_Terminate
+''    event for all weak references pointing to it. Or, it could delegate the
+''    the responsibility to a separate contained object that would surely get
+''    terminated at the same time (e.g. WeakRefInformer)
 '*******************************************************************************
 Option Explicit
 
@@ -153,26 +150,22 @@ Option Explicit
 
 'https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-oaut/3fe7db9f-5803-4dc4-9d14-5425d3f5461f
 'https://docs.microsoft.com/en-us/windows/win32/api/oaidl/ns-oaidl-variant?redirectedfrom=MSDN
-'Flag used to simulate ByRef Variants in order to avoid memory reclaim
-Private Const VT_BYREF As Long = &H4000 'Makes it all possible
-
-'A memory address Long Integer
-Private Type MEM_ADDRESS
-    #If VBA7 Then
-        ptr As LongPtr 'Defaults to LongLong on x64 or Long on x32
-    #Else
-        ptr As Long    'For VB6
-    #End If
-End Type
+'Flag used to simulate ByRef Variants
+Private Const VT_BYREF As Long = &H4000
 
 Private Type FAKE_REFERENCE
-    remoteVarType As Variant 'Manipulates the variant type for 'reference'
-    reference As Variant     'Will be holding the object reference/address
-    vTable As MEM_ADDRESS    'Initial address of virtual table
-    vTableByRef As Variant   'Address used to check if reference is still valid
-    vbLongPtr As Long        'Data type enum (vbLong = 3 or vbLongLong = 20)
-    isValid As Boolean       'Indicates if the memory reference is valid
+    remoteVarType As Variant  'Manipulates the variant type for 'reference'
+    reference As Variant      'Will be holding the object reference/address
 End Type
+
+#If Win64 Then
+    #If Mac Then
+        Const vbLongLong As Long = 20 'Apparently missing for x64 on Mac
+    #End If
+    Const vbLongPtr As Long = vbLongLong
+#Else
+    Const vbLongPtr As Long = vbLong
+#End If
 
 Private m_fake As FAKE_REFERENCE
 
@@ -189,73 +182,69 @@ Private Sub Class_Initialize()
     '   twice when both 'remoteVarType' and 'reference' go out of scope
     'And most importantly this gives the ability to switch the variant type of
     '   the reference at will, just by changing the Integer value of remoteVT
-    CopyMemory ByVal VarPtr(m_fake.remoteVarType), vbInteger + VT_BYREF, 2
-    '
-    'Store the data type enum for mem addresses (vbLong = 3 or vbLongLong = 20)
-    m_fake.vbLongPtr = VBA.VarType(ObjPtr(Nothing))
+    CopyMemory m_fake.remoteVarType, vbInteger + VT_BYREF, 2
 End Sub
 
 '*******************************************************************************
-'Sets the weak/fake reference to an object
+'Saves the memory address to an object's default interface (not to IWeakable)
 '*******************************************************************************
-Public Property Let Object(obj As Object)
-    'Save memory address of the object
-    m_fake.reference = ObjPtr(obj)
+Public Property Set Object(obj As IWeakable)
+    m_fake.reference = ObjPtr(GetDefaultInterface(obj))
+    If m_fake.reference = 0 Then Exit Property
     '
-    m_fake.isValid = (m_fake.reference <> 0)
-    If Not m_fake.isValid Then Exit Property
-    '
-    'Save the default interface's virtual table address by reference. The vTable
-    '   address is found at the first 4 (x32) or 8 (x64) bytes at the referenced
-    '   interface address
-    m_fake.vTableByRef = m_fake.reference
-    CopyMemory ByVal VarPtr(m_fake.vTableByRef), m_fake.vbLongPtr + VT_BYREF, 2
-    '
-    'Save the current vTable address. This is needed later to compare with the
-    '   vTableByRef address in order to establish if the Object has been
-    '   destroyed and it's memory reclaimed.
-    'vTableByRef can still be read within the scope of this method
-    m_fake.vTable.ptr = m_fake.vTableByRef
+    obj.AddWeakRef Me
 End Property
 
 '*******************************************************************************
-'Safely retrieves the object that the saved reference is pointing to
+'Returns the default interface for an object
+'All VB intefaces are dual interfaces meaning all interfaces are derived from
+'   IDispatch which in turn is derived from IUnknown. In VB the Object datatype
+'   stands for the IDispatch interface.
+'Casting from a custom interface (derived only from IUnknown) to IDispatch
+'   forces a call to QueryInterface for the IDispatch interface (which knows
+'   about the default interface)
+'*******************************************************************************
+Private Function GetDefaultInterface(obj As IUnknown) As Object
+    Set GetDefaultInterface = obj
+End Function
+
+'*******************************************************************************
+'Retrieves the object pointed by the saved reference
 'No external API calls are needed!
 '*******************************************************************************
 Public Property Get Object() As Object
-    If Not m_fake.isValid Then Exit Property
+    If m_fake.reference = 0 Then Exit Property
     '
-    'Compare the current vTable address value with the initial address
-    'The current redirected value vTableByRef can NOT be read directly anymore
-    '   so it must be passed ByRef to an utility function
-    m_fake.isValid = (GetRemoteAddress(m_fake.vTableByRef).ptr = m_fake.vTable.ptr)
-    '
-    If m_fake.isValid Then
-        'Address is still valid. Retrive the object
-        'Turn the reference into an object (needs to be done ByRef)
-        VarType(m_fake.remoteVarType) = vbObject
-        Set Object = m_fake.reference
-    End If
-    '
-    'The fake object is not counted (reference count was never incremented by
-    '   calling the IUnknown::AddRef method) so a crash will occur if the
-    '   Variant type remains as vbObject, because when the Variant goes out
-    '   of scope the object count is decremented one more time than it should
-    'Meanwhile, as Integer, the Variant can safely go out of scope anytime
-    VarType(m_fake.remoteVarType) = m_fake.vbLongPtr 'vbLong or vbLongLong
+    Set Object = DeReferenceByVarType(m_fake.remoteVarType)
 End Property
 
 '*******************************************************************************
-'Utility. Changes the data type for the reference Variant while preserving the
-'   level of redirection of remoteVarType
+'Utility function needed to redirect remoteVT - See Class_Initialize comments
 '*******************************************************************************
-Private Property Let VarType(ByRef v As Variant, newType As Integer)
-    v = newType
-End Property
+Private Function DeReferenceByVarType(ByRef remoteVT As Variant) As Object
+    remoteVT = vbObject
+    Set DeReferenceByVarType = m_fake.reference
+    remoteVT = vbLongPtr
+End Function
 
 '*******************************************************************************
-'Returns the value of a Variant that has the VT_BYREF flag set
+'Needs to be called when the referenced object is terminated
 '*******************************************************************************
-Private Function GetRemoteAddress(ByRef memAddress As Variant) As MEM_ADDRESS
-    GetRemoteAddress.ptr = memAddress
+#If VBA7 Then
+Public Sub ObjectTerminated(refAddress As LongPtr)
+#Else
+Public Sub ObjectTerminated(refAddress As Long)
+#End If
+    If m_fake.reference = refAddress Then m_fake.reference = 0
+End Sub
+
+'*******************************************************************************
+'Returns the currently referenced memory address
+'*******************************************************************************
+#If VBA7 Then
+Public Function ReferencedAddress() As LongPtr
+#Else
+Public Function ReferencedAddress() As Long
+#End If
+    ReferencedAddress = m_fake.reference
 End Function
