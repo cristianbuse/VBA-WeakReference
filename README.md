@@ -114,6 +114,10 @@ DemoWeakRef.DemoMain
 * There are no memory leaks even if state is lost.
 * If the saved object has been destroyed, the WeakReference.Object (Get property) safely  returns Nothing
 * The **WeakRefInformer.cls** is not really needed but avoids the duplication of the same code across all classes implementing IWeakable. Just the minimal code presented above in the **Usage** section is needed when using the informer.
+
+## External contributions (not Git)
+Many thanks to Matthieu ([GitHub](https://github.com/retailcoder) / [CR](https://codereview.stackexchange.com/users/23788/mathieu-guindon))  and Greedo ([GitHub](https://github.com/Greedquest) / [CR](https://codereview.stackexchange.com/users/146810/greedo)). See their contributions on [CodeReview](https://codereview.stackexchange.com/questions/245660/simulated-weakreference-class).
+
 ## License
 MIT License
 
