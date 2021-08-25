@@ -4,22 +4,32 @@ Break Reference Cycles in VBA using simulated Weak Object References. In a Garba
 ## Implementation
 In order to be referenced by **WeakReference**, a VBA class must implement the **IWeakable** interface. A **WeakReference** instance saves the memory address of the targeted object (the address of the default interface - not the IWeakable interface) and later uses it to retrieve the target object.
 A Variant is used for storing the target memory address. A second Variant is used to remotely manipulate the VarType of the first Variant by changing the first 2 bytes in memory.
-When the object is needed, the first Variant is turned into an Object (unmanaged - not counted i.e. IUnknown::AddRef method is not called) by changing it's VarType to vbObject (remotely from the second Variant) and then the object is returned. The first variant is then changed back to an Integer (Long/LongLong) memory address to avoid decrementing the reference count of the first variant when it goes out of scope (which would crash the Application).
-
-The remote manipulation of the VarType is done by setting the *VT_BYREF* flag on the second Variant. This is done by using a *CopyMemory* API but only once in the *Class_Initialize* event. After the flag is set, the second Variant can be used to change the VarType of the first Variant just by using a VBA assignment operation (needs a utility method for redirection though). No matter how many times the referenced object needs to be retrieved, no API calls are needed.
+When the object is needed, the first Variant is turned into an Object (unmanaged - not counted i.e. IUnknown::AddRef method is not called) by changing it's VarType to vbObject (remotely from the second Variant) and then the object is returned. The first variant is then changed back to an Integer (Long/LongLong) memory address to avoid decrementing the reference count of the first variant when it goes out of scope (which would crash the Application). The remote manipulation of the VarType is done by setting the *VT_BYREF* flag on the second Variant. This is done using the ```LibMemory``` library from the [VBA-MemoryTools](https://github.com/cristianbuse/VBA-MemoryTools) repository.
 
 To be safe, all WeakReferences must be informed that the targeted Object has been terminated. Unfortunately, the Class_Terminate event is not part of the interface so it cannot be forced to do anything. Because too much boilerplate code would need to be added to all classes implementing IWeakable it is probably best to encapsulate all the logic inside a separate class called **WeakRefInformer** which is to be contained by the targeted class. The main idea is that by not exposing the contained WeakRefInformer object, it will surely go out of scope when the object implementing IWeakable is terminated.
 
 A quick visual example. Consider a "parent" object containing 2 "child" objects pointing back through weak references and a 3rd "loose" weak reference. This would look like:  
 ![enter image description here](https://i.stack.imgur.com/7VhWj.png)
 
-See full implementation description in the **WeakReference.cls** class
-
 ## Installation
 Just import the following code modules in your VBA Project:
-* **WeakReference.cls**
-* **IWeakable.cls**
-* **WeakRefInformer.cls**
+* [**WeakReference.cls**](https://github.com/cristianbuse/VBA-WeakReference/blob/master/src/WeakReference.cls)
+* [**IWeakable.cls**](https://github.com/cristianbuse/VBA-WeakReference/blob/master/src/IWeakable.cls)
+* [**WeakRefInformer.cls**](https://github.com/cristianbuse/VBA-WeakReference/blob/master/src/WeakRefInformer.cls)
+
+You will also need:
+* [**LibMemory**](https://github.com/cristianbuse/VBA-MemoryTools/blob/0060760fb11f7b807bdcc7cae01357b475593b9b/src/LibMemory.bas) (submodule) or you can try the latest version [here](https://github.com/cristianbuse/VBA-MemoryTools/blob/master/src/LibMemory.bas)
+
+Note that ```LibMemory``` is not available in the Zip download. If cloning via GitHub Desktop the submodule will be pulled automatically by default. If cloning via Git Bash then use something like:
+```
+$ git clone https://github.com/cristianbuse/VBA-WeakReference
+$ git submodule init
+$ git submodule update
+```
+or:
+```
+$ git clone --recurse-submodules https://github.com/cristianbuse/VBA-WeakReference
+```
 
 ## Usage
 In all classes that need to be compatible with/referenced by ```WeakReference```, add the following code:
@@ -98,7 +108,7 @@ End Sub
 
 ## Testing
 
-Import the following code modules:
+Import the following code modules from [demo](https://github.com/cristianbuse/VBA-WeakReference/tree/master/src/Demo):
 * **DemoChild.cls**
 * **DemoParent.cls**
 * **DemoWeakRef.bas**
@@ -116,7 +126,7 @@ DemoWeakRef.DemoMain
 * The **WeakRefInformer.cls** is not really needed but avoids the duplication of the same code across all classes implementing IWeakable. Just the minimal code presented above in the **Usage** section is needed when using the informer.
 
 ## External contributions (not Git)
-Many thanks to Matthieu ([GitHub](https://github.com/retailcoder) / [CR](https://codereview.stackexchange.com/users/23788/mathieu-guindon))  and Greedo ([GitHub](https://github.com/Greedquest) / [CR](https://codereview.stackexchange.com/users/146810/greedo)). See their contributions on [CodeReview](https://codereview.stackexchange.com/questions/245660/simulated-weakreference-class).
+Many thanks to Greedo ([GitHub](https://github.com/Greedquest) / [CR](https://codereview.stackexchange.com/users/146810/greedo)). See his contributions on [CodeReview](https://codereview.stackexchange.com/questions/245660/simulated-weakreference-class).
 
 ## License
 MIT License
