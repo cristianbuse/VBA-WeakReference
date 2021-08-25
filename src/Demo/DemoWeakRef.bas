@@ -4,30 +4,51 @@ Option Explicit
 Const LOOPS As Long = 1000000
 
 Sub DemoMain()
+    DemoMultipleChildren
     DemoTerminateParentFirst
     DemoTerminateChildFirst
     DemoTerminateParentBeforeClosing
     DemoSetParentAgainBeforeClosing
-    DemoTerminateExecutionWithExtraChildRef 'stops execution
-    '
-    'Code will not reach this line so you need to run this method manually
-    DemoTerminateExecutionWithNoExtraRefs
+    DemoTerminateExecution
 End Sub
 
 '>>>>>>>>>>>>>>>>>>
 'Demo Methods below
 '>>>>>>>>>>>>>>>>>>
 
+Sub DemoMultipleChildren()
+    Debug.Print String$(62, "=")
+    Debug.Print "DemoMultipleChildren"
+    Debug.Print "..."
+    '
+    Dim c As DemoChild2
+    Dim p As DemoParent2
+    Dim i As Long
+    '
+    Set p = New DemoParent2
+    '
+    For i = 1 To 5
+        Set c = New DemoChild2
+        p.AddChild c
+        Set c.Parent = p
+        Debug.Assert TypeName(p.Child(i).Parent) = "DemoParent2"
+    Next i
+    Set p = New DemoParent2
+End Sub
+
 Sub DemoTerminateParentFirst()
     Debug.Print String$(62, "=")
     Debug.Print "DemoTerminateParentFirst"
     Debug.Print "..."
     '
-    Dim c As New DemoChild
-    Dim p As New DemoParent
+    Dim c As DemoChild
+    Dim p As DemoParent
     '
-    p.Child = c
-    c.Parent = p
+    Set c = New DemoChild
+    Set p = New DemoParent
+    '
+    Set p.Child = c
+    Set c.Parent = p
     '
     Dim t As Double
     Dim i As Long
@@ -35,8 +56,7 @@ Sub DemoTerminateParentFirst()
     '
     t = Timer
     For i = 1 To LOOPS
-        s = TypeName(p.Child.Parent)
-        If s <> "DemoParent" Then Stop
+        Debug.Assert TypeName(p.Child.Parent) = "DemoParent"
     Next i
     Debug.Print "Retrieved Parent from Child for " & LOOPS _
         & " times in " & Round(Timer - t, 3) & " seconds"
@@ -47,11 +67,14 @@ Sub DemoTerminateChildFirst()
     Debug.Print "DemoTerminateChildFirst"
     Debug.Print "..."
     '
-    Dim c As New DemoChild
-    Dim p As New DemoParent
+    Dim c As DemoChild
+    Dim p As DemoParent
     '
-    p.Child = c
-    c.Parent = p
+    Set c = New DemoChild
+    Set p = New DemoParent
+    '
+    Set p.Child = c
+    Set c.Parent = p
     Set c = Nothing
     '
     Dim t As Double
@@ -60,8 +83,7 @@ Sub DemoTerminateChildFirst()
     '
     t = Timer
     For i = 1 To LOOPS
-        s = TypeName(p.Child.Parent)
-        If s <> "DemoParent" Then Stop
+        Debug.Assert TypeName(p.Child.Parent) = "DemoParent"
     Next i
     Debug.Print "Retrieved Parent from Child for " & LOOPS _
         & " times in " & Round(Timer - t, 3) & " seconds"
@@ -72,11 +94,14 @@ Sub DemoTerminateParentBeforeClosing()
     Debug.Print "DemoTerminateParentBeforeClosing"
     Debug.Print "..."
     '
-    Dim c As New DemoChild
-    Dim p As New DemoParent
+    Dim c As DemoChild
+    Dim p As DemoParent
     '
-    p.Child = c
-    c.Parent = p
+    Set c = New DemoChild
+    Set p = New DemoParent
+    '
+    Set p.Child = c
+    Set c.Parent = p
     '
     Dim t As Double
     Dim i As Long
@@ -84,8 +109,7 @@ Sub DemoTerminateParentBeforeClosing()
     '
     t = Timer
     For i = 1 To LOOPS
-        s = TypeName(p.Child.Parent)
-        If s <> "DemoParent" Then Stop
+        Debug.Assert TypeName(p.Child.Parent) = "DemoParent"
     Next i
     Debug.Print "Retrieved Parent from Child for " & LOOPS _
         & " times in " & Round(Timer - t, 3) & " seconds"
@@ -99,11 +123,14 @@ Sub DemoSetParentAgainBeforeClosing()
     Debug.Print "DemoSetParentAgainBeforeClosing"
     Debug.Print "..."
     '
-    Dim c As New DemoChild
-    Dim p As New DemoParent
+    Dim c As DemoChild
+    Dim p As DemoParent
     '
-    p.Child = c
-    c.Parent = p
+    Set c = New DemoChild
+    Set p = New DemoParent
+    '
+    Set p.Child = c
+    Set c.Parent = p
     '
     Dim t As Double
     Dim i As Long
@@ -111,14 +138,13 @@ Sub DemoSetParentAgainBeforeClosing()
     '
     t = Timer
     For i = 1 To LOOPS
-        s = TypeName(p.Child.Parent)
-        If s <> "DemoParent" Then Stop
+        Debug.Assert TypeName(p.Child.Parent) = "DemoParent"
     Next i
     Debug.Print "Retrieved Parent from Child for " & LOOPS _
         & " times in " & Round(Timer - t, 3) & " seconds"
     '
-    c.Parent = Nothing
-    c.Parent = p
+    Set c.Parent = Nothing
+    Set c.Parent = p
     Debug.Print "Parent is now: " & TypeName(c.Parent)
 End Sub
 
@@ -132,16 +158,19 @@ End Sub
 'Quoted from:
 'https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/end-statement
 
-Sub DemoTerminateExecutionWithExtraChildRef()
+Sub DemoTerminateExecution()
     Debug.Print String$(62, "=")
-    Debug.Print "DemoTerminateExecutionWithExtraChildRef"
+    Debug.Print "DemoTerminateExecution"
     Debug.Print "..."
     '
-    Dim c As New DemoChild
-    Dim p As New DemoParent
+    Dim c As DemoChild
+    Dim p As DemoParent
     '
-    p.Child = c
-    c.Parent = p
+    Set c = New DemoChild
+    Set p = New DemoParent
+    '
+    Set p.Child = c
+    Set c.Parent = p
     '
     Dim t As Double
     Dim i As Long
@@ -149,35 +178,7 @@ Sub DemoTerminateExecutionWithExtraChildRef()
     '
     t = Timer
     For i = 1 To LOOPS
-        s = TypeName(p.Child.Parent)
-        If s <> "DemoParent" Then Stop
-    Next i
-    Debug.Print "Retrieved Parent from Child for " & LOOPS _
-        & " times in " & Round(Timer - t, 3) & " seconds"
-    Debug.Print "Stopping Execution"
-    End 'This does not cause any crashes because the Weak Ref is safe
-End Sub
-
-Sub DemoTerminateExecutionWithNoExtraRefs()
-    Debug.Print String$(62, "=")
-    Debug.Print "DemoTerminateExecutionWithNoExtraRefs"
-    Debug.Print "..."
-    '
-    Dim c As New DemoChild
-    Dim p As New DemoParent
-    '
-    p.Child = c
-    c.Parent = p
-    Set c = Nothing
-    '
-    Dim t As Double
-    Dim i As Long
-    Dim s As String
-    '
-    t = Timer
-    For i = 1 To LOOPS
-        s = TypeName(p.Child.Parent)
-        If s <> "DemoParent" Then Stop
+        Debug.Assert TypeName(p.Child.Parent) = "DemoParent"
     Next i
     Debug.Print "Retrieved Parent from Child for " & LOOPS _
         & " times in " & Round(Timer - t, 3) & " seconds"
