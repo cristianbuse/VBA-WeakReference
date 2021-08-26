@@ -36,7 +36,7 @@ In all classes that need to be compatible with/referenced by ```WeakReference```
 ```VBA
 Implements IWeakable
 
-Private Sub IWeakable_AddWeakRef(wRef As WeakReference)
+Private Sub IWeakable_AddWeakRef(ByVal wRef As WeakReference)
     Static informer As New WeakRefInformer
     informer.AddWeakRef wRef, Me
 End Sub
