@@ -39,7 +39,7 @@ Option Explicit
 
 '@Interface
 
-Public Sub AddWeakRef(wRef As WeakReference)
+Public Sub AddWeakRef(ByVal wRef As WeakReference)
     'Example code to be used in Classes implementing this Interface:
 '    Static informer As New WeakRefInformer
 '    informer.AddWeakRef wRef, Me

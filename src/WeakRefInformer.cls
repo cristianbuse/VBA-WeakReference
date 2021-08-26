@@ -48,7 +48,7 @@ Private m_refs As Collection
     Private m_reference As Long
 #End If
 
-Public Sub AddWeakRef(wRef As WeakReference, obj As IWeakable)
+Public Sub AddWeakRef(ByVal wRef As WeakReference, ByVal obj As IWeakable)
     'Store the address for the object implementing IWeakable
     'When Class_Terminate is triggered, this will be passed to each
     '   WeakReference object just in case the WeakReference will be set to a
@@ -58,7 +58,7 @@ Public Sub AddWeakRef(wRef As WeakReference, obj As IWeakable)
     If wRef.ReferencedAddress = m_reference Then m_refs.Add wRef
 End Sub
 
-Private Function GetDefaultInterface(obj As IUnknown) As Object
+Private Function GetDefaultInterface(ByVal obj As IUnknown) As Object
     Set GetDefaultInterface = obj
 End Function
 

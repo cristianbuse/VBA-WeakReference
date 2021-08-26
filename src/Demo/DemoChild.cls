@@ -11,7 +11,7 @@ Option Explicit
 
 Private m_parent As WeakReference
 
-Public Property Set Parent(newParent As DemoParent)
+Public Property Set Parent(ByVal newParent As DemoParent)
     Set m_parent = New WeakReference
     Set m_parent.Object = newParent
 End Property

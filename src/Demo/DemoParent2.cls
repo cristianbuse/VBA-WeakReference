@@ -17,12 +17,12 @@ Private Sub Class_Initialize()
     Set m_children = New Collection
 End Sub
 
-Public Sub AddChild(ch As DemoChild2)
+Public Sub AddChild(ByVal ch As DemoChild2)
     m_children.Add ch
     ch.Name = "Child " & m_children.Count
 End Sub
 
-Public Property Get Child(index_ As Long) As DemoChild2
+Public Property Get Child(ByVal index_ As Long) As DemoChild2
     Set Child = m_children(index_)
 End Property
 
@@ -35,7 +35,7 @@ Private Sub Class_Terminate()
     Debug.Print "Parent terminated " & Now
 End Sub
 
-Private Sub IWeakable_AddWeakRef(wRef As WeakReference)
+Private Sub IWeakable_AddWeakRef(ByVal wRef As WeakReference)
     Static informer As New WeakRefInformer
     informer.AddWeakRef wRef, Me
 End Sub

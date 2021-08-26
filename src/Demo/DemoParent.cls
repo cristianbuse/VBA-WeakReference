@@ -13,7 +13,7 @@ Implements IWeakable
 
 Private m_child As DemoChild
 
-Public Property Set Child(ch As DemoChild)
+Public Property Set Child(ByVal ch As DemoChild)
     Set m_child = ch
 End Property
 Public Property Get Child() As DemoChild
@@ -25,7 +25,7 @@ Private Sub Class_Terminate()
     Debug.Print "Parent terminated " & Now
 End Sub
 
-Private Sub IWeakable_AddWeakRef(wRef As WeakReference)
+Private Sub IWeakable_AddWeakRef(ByVal wRef As WeakReference)
     Static informer As New WeakRefInformer
     informer.AddWeakRef wRef, Me
 End Sub
