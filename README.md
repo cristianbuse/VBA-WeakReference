@@ -63,7 +63,7 @@ Implements IWeakable
 
 Public x As Long
 
-Private Sub IWeakable_AddWeakRef(wRef As WeakReference)
+Private Sub IWeakable_AddWeakRef(ByVal wRef As WeakReference)
     Static informer As New WeakRefInformer
     informer.AddWeakRef wRef, Me
 End Sub
