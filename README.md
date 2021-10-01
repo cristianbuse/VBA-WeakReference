@@ -18,7 +18,7 @@ Just import the following code modules in your VBA Project:
 * [**WeakRefInformer.cls**](https://github.com/cristianbuse/VBA-WeakReference/blob/master/src/WeakRefInformer.cls)
 
 You will also need:
-* [**LibMemory**](https://github.com/cristianbuse/VBA-MemoryTools/blob/0060760fb11f7b807bdcc7cae01357b475593b9b/src/LibMemory.bas) (submodule) or you can try the latest version [here](https://github.com/cristianbuse/VBA-MemoryTools/blob/master/src/LibMemory.bas)
+* **LibMemory** from the [submodules folder](https://github.com/cristianbuse/VBA-WeakReference/tree/master/submodules) or you can try the latest version [here](https://github.com/cristianbuse/VBA-MemoryTools/blob/master/src/LibMemory.bas)
 
 Note that ```LibMemory``` is not available in the Zip download. If cloning via GitHub Desktop the submodule will be pulled automatically by default. If cloning via Git Bash then use something like:
 ```
