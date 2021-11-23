@@ -78,7 +78,7 @@ Option Explicit
 Private m_rm As LibMemory.REMOTE_MEMORY
 
 '*******************************************************************************
-'Saves the memory address of an object's default interface (not to IWeakable)
+'Saves the memory address of an object's default interface (not IWeakable)
 '*******************************************************************************
 Public Property Set Object(ByVal obj As IWeakable)
     m_rm.memValue = ObjPtr(LibMemory.GetDefaultInterface(obj))
@@ -97,7 +97,7 @@ Public Property Get Object() As Object
 End Property
 
 '*******************************************************************************
-'Faster than LibMemory.MemObject(storedPointer) by 10-15% (one less stack frame)
+'Faster than LibMemory.MemObj(storedPointer) by 10-15% (one less stack frame)
 '*******************************************************************************
 Private Function DerefByVarType(ByRef vt As Variant) As Object
     vt = vbObject
