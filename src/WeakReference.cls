@@ -71,20 +71,18 @@ Attribute VB_Exposed = False
 '' Traditionally, an Object was dereferenced by using the CopyMemoryAPI but
 ''    that is extremely slow on certain systems. To avoid this issue, this
 ''    class uses 'LibMemory' (https://github.com/cristianbuse/VBA-MemoryTools)
-''    to quickly read/write required memory using native remote Variants
+''    to quickly read/write required memory
 '*******************************************************************************
 Option Explicit
 
-Private m_rm As LibMemory.REMOTE_MEMORY
+Private m_ptr As LongPtr
 
 '*******************************************************************************
 'Saves the memory address of an object's default interface (not IWeakable)
 '*******************************************************************************
 Public Property Set Object(ByVal obj As IWeakable)
-    m_rm.memValue = ObjPtr(LibMemory.GetDefaultInterface(obj))
-    If m_rm.memValue = 0 Then Exit Property
-    '
-    If Not m_rm.isInitialized Then LibMemory.InitRemoteMemory m_rm
+    m_ptr = ObjPtr(GetDefaultInterface(obj))
+    If m_ptr = NULL_PTR Then Exit Property
     obj.AddWeakRef Me
 End Property
 
@@ -92,37 +90,20 @@ End Property
 'Retrieves the object pointed by the saved reference
 '*******************************************************************************
 Public Property Get Object() As Object
-    If m_rm.memValue = 0 Then Exit Property
-    Set Object = DerefByVarType(m_rm.remoteVT)
+    If m_ptr = NULL_PTR Then Exit Property
+    Set Object = MemObj(m_ptr)
 End Property
-
-'*******************************************************************************
-'Faster than LibMemory.MemObj(storedPointer) by 10-15% (one less stack frame)
-'*******************************************************************************
-Private Function DerefByVarType(ByRef vt As Variant) As Object
-    vt = vbObject
-    Set DerefByVarType = m_rm.memValue
-    vt = LibMemory.vbLongPtr
-End Function
 
 '*******************************************************************************
 'Needs to be called when the referenced object is terminated
 '*******************************************************************************
-#If VBA7 Then
 Public Sub ObjectTerminated(ByVal refAddress As LongPtr)
-#Else
-Public Sub ObjectTerminated(ByVal refAddress As Long)
-#End If
-    If m_rm.memValue = refAddress Then m_rm.memValue = 0
+    If m_ptr = refAddress Then m_ptr = 0
 End Sub
 
 '*******************************************************************************
 'Returns the currently referenced memory address
 '*******************************************************************************
-#If VBA7 Then
 Public Function ReferencedAddress() As LongPtr
-#Else
-Public Function ReferencedAddress() As Long
-#End If
-    ReferencedAddress = m_rm.memValue
+    ReferencedAddress = m_ptr
 End Function
