@@ -34,43 +34,18 @@ Attribute VB_Exposed = False
 ''' FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 ''' IN THE SOFTWARE.
 '''=============================================================================
-
-'*******************************************************************************
-'' When terminated, informs all stored WeakReference objects about termination
-'*******************************************************************************
-
 Option Explicit
 
-Private m_refs As Collection
-#If VBA7 Then
-    Private m_reference As LongPtr
-#Else
-    Private m_reference As Long
-#End If
+Private m_refs As New Collection
+Private m_reference As LongPtr
 
 Public Sub AddWeakRef(ByVal wRef As WeakReference, ByVal obj As IWeakable)
-    'Store the address for the object implementing IWeakable
-    'When Class_Terminate is triggered, this will be passed to each
-    '   WeakReference object just in case the WeakReference will be set to a
-    '   different target (in-between this call and the termination call)
-    If m_reference = 0 Then m_reference = ObjPtr(GetDefaultInterface(obj))
-    '
-    If wRef.ReferencedAddress = m_reference Then m_refs.Add wRef
+    If m_reference = NULL_PTR Then m_reference = ObjPtr(GetDefaultInterface(obj))
+    m_refs.Add wRef
 End Sub
-
-Private Function GetDefaultInterface(ByVal obj As IUnknown) As Object
-    Set GetDefaultInterface = obj
-End Function
-
-Private Sub Class_Initialize()
-    Set m_refs = New Collection
-End Sub
-
-Private Sub Class_Terminate()
+Private Sub Class_Terminate() 'Inform all WeakReferences about termination
     Dim wRef As WeakReference
-    '
     For Each wRef In m_refs
         wRef.ObjectTerminated m_reference
     Next wRef
-    Set m_refs = Nothing
 End Sub

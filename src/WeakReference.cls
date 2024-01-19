@@ -44,11 +44,11 @@ Attribute VB_Exposed = False
 ''    program has stopped execution.
 ''    e.g. A->B (object A holds a reference to object B) and viceversa B->A.
 '' Solutions:
-''    1) One of the references needs to be manually destroyed
-''       e.g. Destroying B->A leaves only A->B . When A goes out of scope
-''       then B goes out of scope (if no other references are pointing to B,
-''       except A->B). Call would be like: B.TerminateRefs
-''       Can be easy to forget to manually call the procedure
+''    1) Manually destroy one of the references
+''       e.g. Destroy B->A by calling something like B.TerminateRefs
+''            This would leave only A->B and problem would be solved.
+''       - Can be easy to forget to manually call the procedure
+''       - If state is lost (before call) then memory is not reclaimed
 ''    2) Use a Weak Reference. e.g. A->B and B--A. In a Garbage Collected
 ''       language, a Weak Reference is not counted and does not protect the
 ''       referenced object from being collected by the Garbage Collector (GC)
@@ -69,9 +69,8 @@ Attribute VB_Exposed = False
 ''    terminated at the same time (e.g. WeakRefInformer)
 ''
 '' Traditionally, an Object was dereferenced by using the CopyMemoryAPI but
-''    that is extremely slow on certain systems. To avoid this issue, this
+''    that is extremely slow in VBA7. To avoid the speed issue, this
 ''    class uses 'LibMemory' (https://github.com/cristianbuse/VBA-MemoryTools)
-''    to quickly read/write required memory
 '*******************************************************************************
 Option Explicit
 
@@ -98,7 +97,7 @@ End Property
 'Needs to be called when the referenced object is terminated
 '*******************************************************************************
 Public Sub ObjectTerminated(ByVal refAddress As LongPtr)
-    If m_ptr = refAddress Then m_ptr = 0
+    If m_ptr = refAddress Then m_ptr = NULL_PTR
 End Sub
 
 '*******************************************************************************

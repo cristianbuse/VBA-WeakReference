@@ -34,9 +34,7 @@ Attribute VB_Exposed = False
 ''' FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 ''' IN THE SOFTWARE.
 '''=============================================================================
-
 Option Explicit
-
 '@Interface
 
 Public Sub AddWeakRef(ByVal wRef As WeakReference)
